@@ -1,0 +1,6 @@
+MSBASIC.LST
+node_modules/
+out/
+*.ROM*
+*.OBJ
+

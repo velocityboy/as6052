@@ -1,0 +1,40 @@
+source-line := [label:] ws* [instruction] ws* [comment]
+label := label-num-char]{6,5}:
+
+instruction := machine-instruction | pseudo-instruction
+
+machine-instruction := opcode [ws+ operand]
+
+operand := immediate | address-exp | indexed-address | indirect-address
+
+immediate := '#' value
+indexed-address := address-exp ',X' | address-exp ',Y'
+indirect-address := '(' address-exp,X ')' | '( 'address-exp '),Y'
+
+address-term := label | value
+address-exp := address-term | address-term + address-term | address-term - address-term
+
+value := '$' hexchar+ | digit+ | '''char | '.'
+
+
+pseudo-instruction := title | org | end | equate
+
+title := TITLE .*
+org := ORG hexchar{1-4}
+end := END
+equate := '=' address-exp
+
+comment := ';' .*
+
+opcode = ADC | AND | ASL | BCC | BCS | BEQ | BIT | BMI | BNE | BPL | BRK | BVC |
+   BVS | CLC | CLD | CLI | CLV | CMP | CPX | CPY | DEC | DEX | DEY | EOR | INC |
+   INX | INY | JMP | JSR | LDA | LDX | LDY | LSR | NOP | ORA | PHA | PLA | PLP |
+   ROL | ROR | RTI | RTS | SBC | SEC | SED | SEI | STA | STX | STY | TAX | TAY |
+   TSX | TXA | RXS | TYA
+
+// character set definitions
+label-char := A-Z, a-z, _
+label-num-char := label-char, 0-9
+digit := 0-9
+hexchar := 0-9, a-f, A-F
+ws := space, tab
