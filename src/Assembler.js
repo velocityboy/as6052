@@ -27,7 +27,6 @@ type ParsedLine = {
 type CachedForwardReference = {
   location: number,
   lineParser: LineParser,
-  modes: OpcodeSet,
   marker: ListingMarker,
   reserve: number,
 };
@@ -271,6 +270,11 @@ export default class Assembler {
     }
 
     const result = this._evaluate(operand);
+    if (result.undefinedSymbols.size !== 0 && !this._pass2) {
+      this._cacheForwardReferenceInstruction(lineParser, 2);
+      return;
+    }
+
     const value = result.value;
 
     const bytes: number[] = [
@@ -396,7 +400,7 @@ export default class Assembler {
     this._addListingLine(lineParser, bytes);
 
     if (bytes == null && length != null && !this._pass2) {
-      this._cacheForwardReferenceInstruction(lineParser, modes, length);
+      this._cacheForwardReferenceInstruction(lineParser, length);
       return;
     }
 
@@ -410,12 +414,10 @@ export default class Assembler {
 
   _cacheForwardReferenceInstruction(
     lineParser: LineParser,
-    modes: OpcodeSet,
     reserve: number): void {
     this._cachedForwardReferences.push({
       location: this._location,
       lineParser,
-      modes,
       marker: this._listing.getInsertionPoint(),
       reserve
     });
