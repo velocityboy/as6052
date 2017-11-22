@@ -22,6 +22,7 @@ export type OpHandlers = {
   block: OpHandler,
   ascii: OpHandler,
   set: OpHandler,
+  radix: OpHandler,
   opcode: (LineParser, OpcodeSet) => void,
   implied: OpcodeHandler,
   accumulator: OpcodeHandler,

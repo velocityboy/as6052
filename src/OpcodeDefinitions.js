@@ -12,6 +12,7 @@ export default function OpcodeDefinitions(h: OpHandlers): Map<string, OpHandler>
     ['BLOCK', (s) => h.block(s)],
     ['ASCII', (s) => h.ascii(s)],
     ['SET', (s) => h.set(s)],
+    ['RADIX', (s) => h.radix(s)],
     ['ADC', (s) =>
       h.opcode(s, [
         (lp) => h.immediate(0x69, lp),

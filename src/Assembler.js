@@ -3,10 +3,11 @@ require('babel-core/register');
 require('babel-polyfill');
 
 import type {ExpressionResult, OpcodeSet, OpHandler, OpHandlers, OpcodeBytes} from './types';
+import type {ExpressionEvaluatorState} from './ExpressionEvaluator';
 
 import fs from 'fs';
 import invariant from 'invariant';
-import Expression from './Expression';
+import ExpressionEvaluator from './ExpressionEvaluator';
 import LineParser from './LineParser';
 import Listing from './Listing';
 import ListingMarker from './ListingMarker';
@@ -29,6 +30,7 @@ type CachedForwardReference = {
   lineParser: LineParser,
   marker: ListingMarker,
   reserve: number,
+  evalState: ExpressionEvaluatorState,
 };
 
 export default class Assembler {
@@ -42,6 +44,7 @@ export default class Assembler {
   _listing: Listing;
   _location: number = 0;
   _symbols: Map<string, number>;
+  _expressionEvaluator: ExpressionEvaluator;
   _cachedForwardReferences: CachedForwardReference[];
   _nextLineMarker: ?ListingMarker;
   _pass2: boolean;
@@ -58,6 +61,7 @@ export default class Assembler {
       ascii: this._ascii.bind(this),
       end: this._end.bind(this),
       set: this._set.bind(this),
+      radix: this._radix.bind(this),
       opcode: this._opcode.bind(this),
       implied: this._implied.bind(this),
       accumulator: this._accumulator.bind(this),
@@ -79,6 +83,7 @@ export default class Assembler {
     this._filename = filename;
     this._listing = new Listing();
     this._symbols = new Map();
+    this._expressionEvaluator = new ExpressionEvaluator(this._symbols);
     this._cachedForwardReferences = [];
     this._objectCode = new ObjectCode();
   }
@@ -114,6 +119,10 @@ export default class Assembler {
       invariant(op != null, 'op bad in forward reference');
       const opHandler = this._opHandlers.get(op);
       invariant(opHandler != null, 'opHandler bad in forward reference');
+
+      // Expression evaluator needs to be at the state it was in
+      // when the op was first eval'ed
+      this._expressionEvaluator.state = forward.evalState;
 
       this._nextLineMarker = forward.marker;
       try {
@@ -377,6 +386,20 @@ export default class Assembler {
     this._listing.addLine(args);
   }
 
+  _radix(lineParser: LineParser): void {
+    const operand = lineParser.operand;
+    if (operand == null) {
+      throw new Error('Missing operand');
+    }
+
+    if (!/^\d+$/.test(operand)) {
+      throw new Error('Operand must be an integer');
+    }
+
+    const radix = parseInt(operand, 10);
+    this._expressionEvaluator.setRadix(radix);
+  }
+
   _opcode(lineParser: LineParser, modes: OpcodeSet): void {
     let bytes: ?(number[]);
     let length: ?number;
@@ -419,7 +442,8 @@ export default class Assembler {
       location: this._location,
       lineParser,
       marker: this._listing.getInsertionPoint(),
-      reserve
+      reserve,
+      evalState: this._expressionEvaluator.state,
     });
 
     this._location += reserve;
@@ -823,8 +847,7 @@ export default class Assembler {
   }
 
   _evaluate(expression: string): ExpressionResult {
-    const expr = new Expression(expression);
-    const result = expr.evaluate(this._symbols);
+    const result = this._expressionEvaluator.evaluate(expression);
     if (this._pass2) {
       this._undefinedSymbols = new Set([
         ...this._undefinedSymbols,
