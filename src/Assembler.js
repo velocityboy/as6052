@@ -462,7 +462,7 @@ export default class Assembler {
       return null;
     }
 
-    if (operand.match(/^\s*A\s*/) == null) {
+    if (operand.match(/^\s*A\s*$/) == null) {
       return null;
     }
 
