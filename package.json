@@ -1,6 +1,6 @@
 {
   "name": "as6502",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "6502 assembler",
   "main": "index.js",
   "repository": "https://github.com/velocityboy/as6502.git",
@@ -13,8 +13,7 @@
     "babel-polyfill": "^6.26.0"
   },
   "scripts": {
-    "build": "babel src/ -d out/ --source-maps inline",
-    "build-maps": "babel src/ -d out/ -s out/"
+    "prepublish": "babel src/ -d out/ --source-maps inline"
   },
   "dependencies": {
     "replace-ext": "^1.0.0",

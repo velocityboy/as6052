@@ -15,7 +15,6 @@ import OpcodeDefinitions from './OpcodeDefinitions';
 import ObjectCode from './ObjectCode';
 import path from 'path';
 import readline from 'readline';
-import replaceExt from 'replace-ext';
 import {sprintf} from 'sprintf-js';
 
 type ParsedLine = {
@@ -33,12 +32,16 @@ type CachedForwardReference = {
   evalState: ExpressionEvaluatorState,
 };
 
+type Results = {
+  listing: Listing,
+  objectCode: ObjectCode,
+};
+
 export default class Assembler {
   static _commentPattern = /^\s*(;.*)$/;
 
   _opHandlers: Map<string, OpHandler>;
 
-  _filename: string;
   _source: string[];
   _currentLineNo: number;
   _listing: Listing;
@@ -51,7 +54,7 @@ export default class Assembler {
   _undefinedSymbols: Set<string>;
   _objectCode: ObjectCode;
 
-  constructor(filename: string) {
+  constructor(source: string[]) {
     const handlers: OpHandlers = {
       title: this._title.bind(this),
       org: this._org.bind(this),
@@ -80,7 +83,7 @@ export default class Assembler {
 
     this._opHandlers = OpcodeDefinitions(handlers);
 
-    this._filename = filename;
+    this._source = source;
     this._listing = new Listing();
     this._symbols = new Map();
     this._expressionEvaluator = new ExpressionEvaluator(this._symbols);
@@ -88,14 +91,7 @@ export default class Assembler {
     this._objectCode = new ObjectCode();
   }
 
-  async assemble(): Promise<void> {
-    try {
-      this._source = await this._readSource();
-    } catch (err) {
-      console.error(err);
-      process.exit(1);
-    }
-
+  assemble(): Results {
     this._pass2 = false;
     this._currentLineNo = 0;
     for (const line of this._source) {
@@ -139,30 +135,10 @@ export default class Assembler {
       this._listing.addError(0, `UNDEFINED: '${undefs}'`);
     }
 
-    this._listing.printListing();
-
-    const objFile = replaceExt(this._filename, '.OBJ');
-    this._objectCode.writeObjectFile(objFile);
-  }
-
-  async _readSource(): Promise<string[]> {
-    return new Promise((resolve, reject) => {
-      const source: string[] = [];
-      try {
-        const reader = readline.createInterface({
-          input: fs.createReadStream(this._filename),
-          crlfDelay: Infinity
-        });
-
-      this._source = [];
-      reader
-        .on('line', line => source.push(line))
-        .on('close', () => resolve(source));
-
-      } catch (err) {
-        resolve(err);
-      }
-    });
+    return {
+      listing: this._listing,
+      objectCode: this._objectCode
+    };
   }
 
   _parseLine(line: string): void {
